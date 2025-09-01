@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+enum Role {
+  super
+  moderator
+}
+
+enum Status {
+  pending
+  accepted
+}
+
+enum City {
+  Erbil
+  Sulaimani
+  Duhok
+  Halabja
+  Kirkuk
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+}
+
+model Post {
+  id            Int       @id @default(autoincrement())
+  status        Status    @default(pending)
+  name          String?
+  uploaderName  String?
+  email         String?
+  city          City?
+  district      String?
+  location      String?
+  createdAt     DateTime  @default(now())
+  acceptedAt    DateTime?
+  updatedAt     DateTime?
+  images        Image[]
+}
+
+model Image {
+  id     Int    @id @default(autoincrement())
+  url    String
+  order  Int    @default(0)
+  post   Post   @relation(fields: [postId], references: [id])
+  postId Int
+}
