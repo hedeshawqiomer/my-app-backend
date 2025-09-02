@@ -18,9 +18,18 @@ import * as ctrl from "../controllers/posts.images.controller.js";
 
 
 // (your existing multer storage here) ...
+// Recompute the same directory here (or import from server file)
+const UPLOADS_DIR =
+  process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
+
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads"),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${Math.random().toString().slice(2)}${path.extname(file.originalname)}`)
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '');
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
 });
 
 const upload = multer({ storage });

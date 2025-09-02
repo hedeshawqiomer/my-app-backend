@@ -7,6 +7,9 @@ import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import pgSession from 'connect-pg-simple';
+import pkg from 'pg';
+const PgStore = pgSession(session);
 
 import authRouter from './routes/auth.routes.js';
 import postsRouter from './routes/posts.routes.js';
@@ -61,12 +64,22 @@ app.use(cookieParser());
 /* =========================
    Static uploads (configurable)
    ========================= */
-const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+export const UPLOADS_DIR =
+  process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
+
 app.use(
   '/uploads',
   helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }),
   express.static(UPLOADS_DIR)
 );
+
+// (optional) Keep old /public URLs working too
+app.use(
+  '/public',
+  helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }),
+  express.static(UPLOADS_DIR)
+);
+
 
 /* =========================
    Sessions (HTTP vs HTTPS)
@@ -77,17 +90,25 @@ const usingHttps =
   process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1';
 
 app.use(session({
+  store: new PgStore({
+    conString: process.env.DATABASE_URL,
+    schemaName: 'public',
+    tableName: 'session',
+  }),
   name: process.env.SESSION_NAME || 'ek_session',
   secret: process.env.SESSION_SECRET || 'dev-secret',
   resave: false,
   saveUninitialized: false,
+  proxy: true, // needed on Railway/Netlify combo
   cookie: {
     httpOnly: true,
     sameSite: usingHttps ? 'none' : 'lax',
-    secure: usingHttps, // must be true when SameSite=None
+    secure: usingHttps,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
 }));
+
+
 
 /* =========================
    Routes
