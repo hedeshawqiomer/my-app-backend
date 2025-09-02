@@ -89,27 +89,18 @@ app.set('trust proxy', 1); // needed behind proxies (ngrok/Render/Nginx)
 const usingHttps =
   process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1';
 
-
-
-// Create a dedicated pg Pool for the session store (with SSL relaxed)
-const pool = new pkg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // <-- prevents "self-signed certificate in chain"
-});
-
-// 2) Use Pool (not conString) + auto-create table
 app.use(session({
   store: new PgStore({
-    pool,                          // <-- use pool
+    conString: process.env.DATABASE_URL,
     schemaName: 'public',
     tableName: 'session',
-    createTableIfMissing: true,    // <-- create table if missing
+    createTableIfMissing: true,    // ← add this line
   }),
   name: process.env.SESSION_NAME || 'ek_session',
   secret: process.env.SESSION_SECRET || 'dev-secret',
   resave: false,
   saveUninitialized: false,
-  proxy: true, // Railway behind proxy
+  proxy: true,
   cookie: {
     httpOnly: true,
     sameSite: usingHttps ? 'none' : 'lax',
@@ -117,7 +108,6 @@ app.use(session({
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
 }));
-
 
 
 
