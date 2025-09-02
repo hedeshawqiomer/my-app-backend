@@ -94,13 +94,12 @@ app.use(session({
     conString: process.env.DATABASE_URL,
     schemaName: 'public',
     tableName: 'session',
-    createTableIfMissing: true,    // ← add this line
   }),
   name: process.env.SESSION_NAME || 'ek_session',
   secret: process.env.SESSION_SECRET || 'dev-secret',
   resave: false,
   saveUninitialized: false,
-  proxy: true,
+  proxy: true, // needed on Railway/Netlify combo
   cookie: {
     httpOnly: true,
     sameSite: usingHttps ? 'none' : 'lax',
@@ -108,7 +107,6 @@ app.use(session({
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
 }));
-
 
 
 
