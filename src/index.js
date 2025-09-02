@@ -94,6 +94,7 @@ app.use(session({
     conString: process.env.DATABASE_URL,
     schemaName: 'public',
     tableName: 'session',
+    createTableIfMissing: true
   }),
   name: process.env.SESSION_NAME || 'ek_session',
   secret: process.env.SESSION_SECRET || 'dev-secret',
