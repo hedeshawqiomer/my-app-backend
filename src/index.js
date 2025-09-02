@@ -94,15 +94,16 @@ const usingHttps =
 // Create a dedicated pg Pool for the session store (with SSL relaxed)
 const pool = new pkg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // <-- important for Supabase pooler
+  ssl: { rejectUnauthorized: false }, // <-- prevents "self-signed certificate in chain"
 });
 
+// 2) Use Pool (not conString) + auto-create table
 app.use(session({
   store: new PgStore({
-    pool,                       // use the pool instead of conString
+    pool,                          // <-- use pool
     schemaName: 'public',
     tableName: 'session',
-    createTableIfMissing: true, // auto-create the table if missing
+    createTableIfMissing: true,    // <-- create table if missing
   }),
   name: process.env.SESSION_NAME || 'ek_session',
   secret: process.env.SESSION_SECRET || 'dev-secret',
