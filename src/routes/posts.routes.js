@@ -5,7 +5,7 @@ import { createPost, listPosts,acceptPost,updatePost,deletePost } from "../contr
 import { requireAuth ,requireRole } from "../middlewares/auth.js";
 import { prisma } from '../lib/prisma.js';
 import * as ctrl from "../controllers/posts.images.controller.js";
-
+import fs from "node:fs";
 
 
 
