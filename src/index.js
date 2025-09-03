@@ -7,8 +7,9 @@ import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import pgSession from 'connect-pg-simple';
-import pkg from 'pg';
+import pkg from 'pg'; // pg Pool
 const PgStore = pgSession(session);
 
 import authRouter from './routes/auth.routes.js';
@@ -30,28 +31,22 @@ const allowedFromEnv = (process.env.BACKEND_ALLOWED_ORIGINS || '')
 
 app.use(cors({
   origin(origin, cb) {
-    // Allow no-origin (curl/Postman), and allow explicit env entries
     if (!origin || allowedFromEnv.includes(origin)) return cb(null, true);
-
-    // auto-allow Vercel & ngrok during dev if you don't want to keep editing env
     try {
       const { hostname } = new URL(origin);
-      if (hostname.endsWith('.vercel.app') ||
-          hostname.endsWith('.ngrok-free.app') ||
-          hostname.endsWith('.ngrok.app')) {
-        return cb(null, true);
-      }
-    } catch (_) {}
-
+      if (
+        hostname.endsWith('.vercel.app') ||
+        hostname.endsWith('.ngrok-free.app') ||
+        hostname.endsWith('.ngrok.app') ||
+        hostname.endsWith('.netlify.app')
+      ) return cb(null, true);
+    } catch {}
     return cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
 }));
-
-// Preflight
-
 
 /* =========================
    Security, logging, parsing
@@ -72,29 +67,31 @@ app.use(
   helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }),
   express.static(UPLOADS_DIR)
 );
-
-// (optional) Keep old /public URLs working too
 app.use(
   '/public',
   helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }),
   express.static(UPLOADS_DIR)
 );
 
-
 /* =========================
    Sessions (HTTP vs HTTPS)
    ========================= */
-app.set('trust proxy', 1); // needed behind proxies (ngrok/Render/Nginx)
+app.set('trust proxy', 1);
 
-// build a pg Pool that accepts Supabase's CA
+// 1) decide cookie mode BEFORE using it
+const usingHttps =
+  process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1';
+
+// 2) PG pool with SSL relaxed for Supabase's managed CA
 const pool = new pkg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },   // <-- the important part
+  connectionString: process.env.DATABASE_URL, // use 5432 + sslmode=require at runtime
+  ssl: { rejectUnauthorized: false },
 });
 
+// 3) session store that uses the pool
 app.use(session({
   store: new PgStore({
-    pool,                       // <-- use the pool, not conString
+    pool,
     schemaName: 'public',
     tableName: 'session',
     createTableIfMissing: true,
@@ -112,10 +109,6 @@ app.use(session({
   },
 }));
 
-
-
-
-
 /* =========================
    Routes
    ========================= */
@@ -123,11 +116,11 @@ app.use(postsImagesRouter);
 app.use('/auth', authRouter);
 app.use('/posts', postsRouter);
 
-// health check
+// health check (simple, no DB)
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 /* =========================
-   Basic error handler (optional)
+   Basic error handler
    ========================= */
 app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
@@ -137,7 +130,7 @@ app.use((err, _req, res, _next) => {
 /* =========================
    Start server
    ========================= */
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4000; // Railway injects 8080
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`API on http://0.0.0.0:${PORT}`);
   console.log(`Uploads served from: ${UPLOADS_DIR}`);
