@@ -89,24 +89,31 @@ app.set('trust proxy', 1); // needed behind proxies (ngrok/Render/Nginx)
 const usingHttps =
   process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1';
 
+// server index.js (or wherever you create the session store)
 app.use(session({
   store: new PgStore({
-    conString: process.env.DATABASE_URL,
+    conObject: {
+      connectionString: process.env.DATABASE_URL,
+      // Accept Supabase's managed certificate chain
+      ssl: { rejectUnauthorized: false },
+    },
     schemaName: 'public',
     tableName: 'session',
+    createTableIfMissing: true,
   }),
   name: process.env.SESSION_NAME || 'ek_session',
   secret: process.env.SESSION_SECRET || 'dev-secret',
   resave: false,
   saveUninitialized: false,
-  proxy: true, // needed on Railway/Netlify combo
+  proxy: true,
   cookie: {
     httpOnly: true,
-    sameSite: usingHttps ? 'none' : 'lax',
-    secure: usingHttps,
+    sameSite: (process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1') ? 'none' : 'lax',
+    secure: (process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1'),
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
 }));
+
 
 
 
