@@ -86,17 +86,15 @@ app.use(
    ========================= */
 app.set('trust proxy', 1); // needed behind proxies (ngrok/Render/Nginx)
 
-const usingHttps =
-  process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1';
+// build a pg Pool that accepts Supabase's CA
+const pool = new pkg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },   // <-- the important part
+});
 
-// server index.js (or wherever you create the session store)
 app.use(session({
   store: new PgStore({
-    conObject: {
-      connectionString: process.env.DATABASE_URL,
-      // Accept Supabase's managed certificate chain
-      ssl: { rejectUnauthorized: false },
-    },
+    pool,                       // <-- use the pool, not conString
     schemaName: 'public',
     tableName: 'session',
     createTableIfMissing: true,
@@ -108,11 +106,12 @@ app.use(session({
   proxy: true,
   cookie: {
     httpOnly: true,
-    sameSite: (process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1') ? 'none' : 'lax',
-    secure: (process.env.NODE_ENV === 'production' || process.env.DEV_HTTPS === '1'),
+    sameSite: usingHttps ? 'none' : 'lax',
+    secure: usingHttps,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
 }));
+
 
 
 
