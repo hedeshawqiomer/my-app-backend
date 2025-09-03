@@ -3,11 +3,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const CITY_DISTRICTS = {
-  Erbil: ["Soran", "Shaqlawa", "Mergasor", "Koya"],
-  Sulaimani: ["Chamchamal", "Tasluja", "Penjwen", "Qaladze"],
-  Duhok: ["Akre", "Zakho", "Amadiya", "Simele"],
-  Halabja: ["Byara", "Tawella"],
-  Kirkuk: ["Daquq", "Tuz Khurmatu"],
+  Erbil: ["Hawler", "Soran", "Shaqlawa", "Mergasor", "Choman", "Koye","Rwanduz","Dashti Hawler"],
+    Sulaimani: ["Slemani", "Bazyan", "Penjwen", "Qaradax", "Sharbazher", "Dukan","Ranya","Pashadar","Penjwin","Chemchemal"],
+    Duhok: ["Duhok","Akre", "Zakho", "Amadiya", "Simele","Bardarash","Shekhan"],
+    Halabja: ["Halbja","Khurmal","Byara", "Tawella"]
 };
 
 function parseLatLng(text = "") {
@@ -103,7 +102,8 @@ export async function acceptPost(req, res, next) {
       where: { id },
       select: { id: true, status: true },
     });
-    if (!existing) return res.status(404).json({ error: "Not found" });
+    if (!existing) return res
+    .status(404).json({ error: "Not found" });
     if (existing.status === "accepted") {
       return res.status(400).json({ error: "Already accepted" });
     }
