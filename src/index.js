@@ -111,7 +111,7 @@ async function initSessions() {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       },
     }));
-    console.warn('Using in-memory session store temporaril.');
+    console.warn('Using in-memory session store temporaril');
   }
 }
 await initSessions();
