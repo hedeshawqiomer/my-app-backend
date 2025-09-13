@@ -2,25 +2,49 @@
 import 'dotenv/config';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient();
 
 async function main() {
-  const users = [
-    { email: 'admin1@example.com', password: '123456', role: 'super' },
-    { email: 'admin2@example.com', password: '654321', role: 'moderator' },
+  // 1) Read bcrypt cost from env (default 10)
+  const cost = parseInt(process.env.BCRYPT_COST || "10", 10);
 
+  // 2) Default seed users (fallback)
+  const defaultUsers = [
+    { email: "realhede7@gmail.com", password: "SuperStrongPass123!", role: "super" }, // your real Gmail as super
+    { email: "hedishawqi22@gmail.com", password: "UltraStrongPass#2025", role: "moderator" }, // moderator with strong pass
   ];
 
-  for (const u of users) {
-    const hash = await bcrypt.hash(u.password, 10);
-    await prisma.user.upsert({
-      where: { email: u.email },
-      update: { password: hash, role: u.role }, // update if exists
-      create: { email: u.email, password: hash, role: u.role },
+  // 3) If SEED_ADMINS is set, parse it instead of using defaults
+  let users = defaultUsers;
+  if (process.env.SEED_ADMINS) {
+    users = process.env.SEED_ADMINS.split(",").map((entry) => {
+      const [email, password, role] = entry.split(":");
+      return { email, password, role };
     });
   }
 
-  console.log('✅ Seeded/updated admin + test users');
+  // 4) Protect production unless explicitly allowed
+  if (process.env.NODE_ENV === "production" && process.env.SEED_ALLOW_PROD !== "true") {
+    console.log("❌ Refusing to seed in production without SEED_ALLOW_PROD=true");
+    process.exit(1);
+  }
+
+  // 5) Upsert users
+  let superCount = 0, modCount = 0;
+  for (const u of users) {
+    const hash = await bcrypt.hash(u.password, cost);
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: { password: hash, role: u.role },
+      create: { email: u.email, password: hash, role: u.role },
+    });
+    if (u.role === "super") superCount++;
+    if (u.role === "moderator") modCount++;
+  }
+
+  console.log(`✅ Seed completed`);
+  console.log(`   Users total: ${users.length} (super: ${superCount}, moderator: ${modCount})`);
 }
 
 main()
