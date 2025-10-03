@@ -26,7 +26,7 @@ async function main() {
 
   // 4) Protect production unless explicitly allowed
   if (process.env.NODE_ENV === "production" && process.env.SEED_ALLOW_PROD !== "true") {
-    console.log("❌ Refusing to seed in production without SEED_ALLOW_PROD=true");
+    console.log("❌ Refusing to seed in n production without SEED_ALLOW_PROD=true");
     process.exit(1);
   }
 
