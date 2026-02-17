@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import fs from "node:fs/promises";
+import { supabase } from "../lib/supabase.js";
 import path from "node:path";
 
 const CITY_DISTRICTS = {
@@ -45,6 +45,37 @@ export async function createPost(req, res, next) {
       return res.status(400).json({ error: "location must be 'lat,lng' (e.g., 36.1909,44.0069)" });
     }
 
+    // Upload images to Supabase
+    const uploadedImages = await Promise.all(
+      files.map(async (file, idx) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname);
+        const filename = `post-${uniqueSuffix}${ext}`;
+
+        const { data, error } = await supabase.storage
+          .from('images') // Bucket name
+          .upload(filename, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false
+          });
+
+        if (error) {
+          console.error('Supabase upload error:', error);
+          throw new Error('Failed to upload image');
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('images')
+          .getPublicUrl(filename);
+        
+        return {
+          url: publicUrl,
+          order: idx
+        };
+      })
+    );
+
     const post = await prisma.post.create({
       data: {
         status: "pending",
@@ -56,10 +87,7 @@ export async function createPost(req, res, next) {
         // we keep your schema as a single string; store normalized "lat,lng"
         location: `${coords.lat},${coords.lng}`,
         images: {
-          create: files.map((f, idx) => ({
-            url: `/uploads/${f.filename}`,
-            order: idx,
-          })),
+          create: uploadedImages,
         },
       },
       include: { images: true },
@@ -180,14 +208,23 @@ export async function deletePost(req, res, next) {
       return res.status(403).json({ error: "Forbidden (moderator can delete only pending)" });
     }
 
-    // try to remove image files from /uploads (best-effort)
+    // try to remove image files from Supabase (best-effort)
+    const pathsToDelete = [];
     for (const img of post.images) {
-      // img.url looks like "/uploads/<filename>"
-      const filename = img.url.startsWith("/uploads/")
-        ? img.url.replace("/uploads/", "")
-        : img.url;
-      const full = path.join(process.cwd(), "uploads", filename);
-      try { await fs.unlink(full); } catch (_) { /* ignore missing */ }
+      // Extract filename from Supabase URL
+      // Example URL: https://xyz.supabase.co/storage/v1/object/public/images/filename.jpg
+      try {
+        const urlObj = new URL(img.url);
+        const parts = urlObj.pathname.split('/');
+        const filename = parts[parts.length - 1]; // last segment
+        if (filename) pathsToDelete.push(filename);
+      } catch (err) {
+        console.warn('Could not parse image URL for deletion:', img.url);
+      }
+    }
+
+    if (pathsToDelete.length > 0) {
+      await supabase.storage.from('images').remove(pathsToDelete);
     }
 
     // delete image rows then the post
