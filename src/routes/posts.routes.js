@@ -2,7 +2,8 @@ import { Router } from "express";
 import multer from "multer";
 import path from "node:path";
 import { createPost, listPosts,acceptPost,updatePost,deletePost } from "../controllers/posts.controller.js";
-import { requireAuth ,requireRole } from "../middlewares/auth.js";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { publicPostLimiter } from "../middlewares/rateLimit.js";
 import { prisma } from '../lib/prisma.js';
 import * as ctrl from "../controllers/posts.images.controller.js";
 import fs from "node:fs";
@@ -37,7 +38,7 @@ const upload = multer({ storage });
 const r = Router();
 
 // PUBLIC create
-r.post("/", upload.array("images", 10), createPost);
+r.post("/", publicPostLimiter, upload.array("images", 10), createPost);
 
 // 🔒 AUTH required to list
 r.get("/", requireAuth, listPosts);
@@ -64,15 +65,16 @@ r.get('/public', async (req, res, next) => {
   }
 });
 
-r.delete("/posts/:id/images/:imageId", ctrl.deleteImageById);
+// Secure image deletion routes
+r.delete("/posts/:id/images/:imageId", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImageById);
 
 // delete ONE by url  ✅ this matches your frontend call
 // e.g. DELETE /posts/10/images?url=/uploads/abc.jpg
-r.delete("/posts/:id/images", ctrl.deleteImageByUrl);
+r.delete("/posts/:id/images", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImageByUrl);
 
 // (optional) bulk delete for multiple ids/urls
 // e.g. POST /posts/10/images:delete  { ids:[], urls:[] }
-r.post("/posts/:id/images:delete", ctrl.deleteImagesBulk);
+r.post("/posts/:id/images:delete", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImagesBulk);
 
 
 

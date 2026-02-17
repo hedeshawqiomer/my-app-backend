@@ -20,21 +20,25 @@ app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
 /* ----- CORS (no DB) ----- */
-const allowedFromEnv = (process.env.BACKEND_ALLOWED_ORIGINS || '')
-  .split(',').map(s => s.trim()).filter(Boolean);
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  ...(process.env.BACKEND_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
+];
 
 app.use(cors({
   origin(origin, cb) {
-    if (!origin || allowedFromEnv.includes(origin)) return cb(null, true);
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+
     try {
       const { hostname } = new URL(origin);
-      if (hostname.endsWith('.vercel.app') ||
-          hostname.endsWith('.ngrok-free.app') ||
-          hostname.endsWith('.ngrok.app') ||
-          hostname.endsWith('.netlify.app')) {
-        return cb(null, true);
-      }
+      // STRICTER: only allow specific subdomains if needed, or remove this block entirely
+      // to rely solely on allowedOrigins.
+      // For now, we removed the wildcard .vercel.app logic to be safe.
+      // If you need specific Deployments, add them to BACKEND_ALLOWED_ORIGINS env var.
     } catch {}
+    
     return cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -111,7 +115,7 @@ async function initSessions() {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       },
     }));
-    console.warn('Using in-memory session store temporaril');
+    console.warn('Using in-memory session store temporarily');
   }
 }
 await initSessions();
