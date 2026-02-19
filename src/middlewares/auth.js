@@ -7,7 +7,7 @@ export function requireRole(roles) {
   return (req, res, next) => {
     const u = req.session?.user;
     if (!u) return res.status(401).json({ error: 'Unauthoriz' });
-    if (!allow.includes(u.role)) return res.status(403).json({ error: 'Forbidden' });
+    if (!allow.includes(u.role)) return res.status(403).json({ error: 'Forbidden.' });
     next();
   };
 }
