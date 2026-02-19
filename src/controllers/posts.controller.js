@@ -1,13 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { supabase } from "../lib/supabase.js";
 import path from "node:path";
-
-const CITY_DISTRICTS = {
-  Erbil: ["Hawler", "Soran", "Shaqlawa", "Mergasor", "Choman", "Koye","Rwanduz","Dashti Hawler"],
-    Sulaimani: ["Slemani", "Bazyan", "Penjwen", "Qaradax", "Sharbazher", "Dukan","Ranya","Pashadar","Penjwin","Chemchemal"],
-    Duhok: ["Duhok","Akre", "Zakho", "Amadiya", "Simele","Bardarash","Shekhan"],
-    Halabja: ["Halbja","Khurmal","Byara", "Tawella"]
-};
+import { CITY_DISTRICTS } from "../utils/constants.js";
 
 function parseLatLng(text = "") {
   const m = String(text).trim().match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
