@@ -19,7 +19,7 @@ export async function createPost(req, res, next) {
 
     // require min 4 images
     if (files.length < 4) {
-      return res.status(400).json({ error: "At least 4 images are required (min 4)." });
+      return res.status(400).json({ error: "At least 4 images are required." });
     }
 
     // city/district checks (only if provided)

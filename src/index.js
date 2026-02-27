@@ -30,15 +30,6 @@ app.use(cors({
   origin(origin, cb) {
     if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
-
-    try {
-      const { hostname } = new URL(origin);
-      // STRICTER: only allow specific subdomains if needed, or remove this block entirely
-      // to rely solely on allowedOrigins.
-      // For now, we removed the wildcard .vercel.app logic to be safe.
-      // If you need specific Deployments, add them to BACKEND_ALLOWED_ORIGINS env var.
-    } catch {}
-    
     return cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -54,7 +45,11 @@ export const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), '
 
 import authRouter from './routes/auth.routes.js';
 import postsRouter from './routes/posts.routes.js';
-import postsImagesRouter from './routes/posts.images.routes.js';
+
+/* ----- Validate critical env vars ----- */
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('SESSION_SECRET is required in production!');
+}
 
 /* ----- Sessions (DB used) ----- */
 app.set('trust proxy', 1);
@@ -124,7 +119,6 @@ await initSessions();
 app.use('/uploads', helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }), express.static(UPLOADS_DIR));
 app.use('/public',  helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }), express.static(UPLOADS_DIR));
 
-app.use(postsImagesRouter);
 app.use('/auth',  authRouter);
 app.use('/posts', postsRouter);
 

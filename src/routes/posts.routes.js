@@ -35,7 +35,7 @@ const upload = multer({
 const r = Router();
 
 // PUBLIC create
-r.post("/", publicPostLimiter, upload.array("images", 10), createPost);
+r.post("/", publicPostLimiter, upload.array("images", 15), createPost);
 
 // 🔒 AUTH required to list
 r.get("/", requireAuth, listPosts);
