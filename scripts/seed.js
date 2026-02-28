@@ -9,28 +9,20 @@ async function main() {
   // 1) Read bcrypt cost from env (default 10)
   const cost = parseInt(process.env.BCRYPT_COST || "10", 10);
 
-  // 2) Default seed users (fallback)
-  const defaultUsers = [
-    {
-      email: "realhede7@gmail.com",
-      password: "SuperStrongPass123!",
-      role: "super",
-    }, // your real Gmail as super
-    {
-      email: "hedishawqi22@gmail.com",
-      password: "UltraStrongPass#2025",
-      role: "moderator",
-    }, // moderator with strong pass
-  ];
-
-  // 3) If SEED_ADMINS is set, parse it instead of using defaults
-  let users = defaultUsers;
-  if (process.env.SEED_ADMINS) {
-    users = process.env.SEED_ADMINS.split(",").map((entry) => {
-      const [email, password, role] = entry.split(":");
-      return { email, password, role };
-    });
+  // 2) Read admin users from env (REQUIRED — never hardcode passwords!)
+  //    Format: email:password:role,email:password:role
+  //    Example: SEED_ADMINS="admin@gmail.com:MyPass123!:super,mod@gmail.com:ModPass456!:moderator"
+  if (!process.env.SEED_ADMINS) {
+    console.log("❌ SEED_ADMINS env variable is required.");
+    console.log('   Format: SEED_ADMINS="email:password:role,email:password:role"');
+    console.log('   Example: SEED_ADMINS="admin@gmail.com:StrongPass!:super"');
+    process.exit(1);
   }
+
+  const users = process.env.SEED_ADMINS.split(",").map((entry) => {
+    const [email, password, role] = entry.split(":");
+    return { email, password, role };
+  });
 
   // 4) Protect production unless explicitly allowed
   if (
