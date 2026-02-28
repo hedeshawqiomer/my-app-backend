@@ -19,9 +19,9 @@ async function main() {
     process.exit(1);
   }
 
-  const users = process.env.SEED_ADMINS.split(",").map((entry) => {
+  const users = process.env.SEED_ADMINS.trim().split(",").map((entry) => {
     const [email, password, role] = entry.split(":");
-    return { email, password, role };
+    return { email: email.trim(), password: password.trim(), role: role.trim() };
   });
 
   // 4) Protect production unless explicitly allowed
