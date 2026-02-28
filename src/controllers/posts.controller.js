@@ -228,5 +228,3 @@ export async function deletePost(req, res, next) {
     res.json({ ok: true });
   } catch (e) { next(e); }
 }
-
-

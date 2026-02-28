@@ -1,23 +1,12 @@
 import { Router } from "express";
 import multer from "multer";
-import path from "node:path";
-import { createPost, listPosts,acceptPost,updatePost,deletePost } from "../controllers/posts.controller.js";
+import { createPost, listPosts, acceptPost, updatePost, deletePost } from "../controllers/posts.controller.js";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { publicPostLimiter } from "../middlewares/rateLimit.js";
 import { prisma } from '../lib/prisma.js';
 import * as ctrl from "../controllers/posts.images.controller.js";
-import fs from "node:fs";
 
-
-
-
-
-
-
-// 🔒 accept (both roles)
-
-
-// 1. Multer setup (Store in Memory for Supabase Upload)
+// Multer setup (Store in Memory for Supabase Upload)
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -42,7 +31,7 @@ r.get("/", requireAuth, listPosts);
 r.post("/:id/accept", requireAuth, requireRole(["super", "moderator"]), acceptPost);
 r.patch("/:id", requireAuth, requireRole("super"), updatePost);
 r.delete("/:id", requireAuth, requireRole(["super", "moderator"]), deletePost);
-// GET /posts/public?city=Erbil
+
 // GET /posts/public?city=Erbil
 r.get('/public', async (req, res, next) => {
   try {
@@ -72,7 +61,5 @@ r.delete("/posts/:id/images", requireAuth, requireRole(["super", "moderator"]), 
 // (optional) bulk delete for multiple ids/urls
 // e.g. POST /posts/10/images:delete  { ids:[], urls:[] }
 r.post("/posts/:id/images:delete", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImagesBulk);
-
-
 
 export default r;

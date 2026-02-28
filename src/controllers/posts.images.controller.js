@@ -1,8 +1,5 @@
 // controllers/posts.images.controller.js
-import fs from "node:fs/promises";
-import path from "node:path";
 import { prisma } from "../lib/prisma.js";
-
 import { supabase } from "../lib/supabase.js";
 
 const removeSupabase = async (u) => {
