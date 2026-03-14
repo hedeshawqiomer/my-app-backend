@@ -52,14 +52,14 @@ r.get('/public', async (req, res, next) => {
 });
 
 // Secure image deletion routes
-r.delete("/posts/:id/images/:imageId", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImageById);
+r.delete("/:id/images/:imageId", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImageById);
 
 // delete ONE by url  ✅ this matches your frontend call
 // e.g. DELETE /posts/10/images?url=/uploads/abc.jpg
-r.delete("/posts/:id/images", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImageByUrl);
+r.delete("/:id/images", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImageByUrl);
 
 // (optional) bulk delete for multiple ids/urls
-// e.g. POST /posts/10/images:delete  { ids:[], urls:[] }
-r.post("/posts/:id/images:delete", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImagesBulk);
+// e.g. POST /posts/10/images/bulk-delete  { ids:[], urls:[] }
+r.post("/:id/images/bulk-delete", requireAuth, requireRole(["super", "moderator"]), ctrl.deleteImagesBulk);
 
 export default r;
