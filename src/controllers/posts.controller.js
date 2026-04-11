@@ -4,7 +4,9 @@ import path from "node:path";
 import { CITY_DISTRICTS } from "../utils/constants.js";
 
 function parseLatLng(text = "") {
-  const m = String(text).trim().match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
+  const m = String(text)
+    .trim()
+    .match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
   if (!m) return null;
   const lat = parseFloat(m[1]);
   const lng = parseFloat(m[3]);
@@ -13,6 +15,7 @@ function parseLatLng(text = "") {
 }
 
 export async function createPost(req, res, next) {
+  const uploadedPaths = [];
   try {
     const { name, email, city, district, location } = req.body;
     const files = req.files || [];
@@ -29,46 +32,50 @@ export async function createPost(req, res, next) {
         return res.status(400).json({ error: `Unknown city: ${city}` });
       }
       if (district && !allowed.includes(district)) {
-        return res.status(400).json({ error: `District "${district}" is not in ${city}` });
+        return res
+          .status(400)
+          .json({ error: `District "${district}" is not in ${city}` });
       }
     }
 
     // location must be "lat,lng"
     const coords = parseLatLng(location);
     if (!coords) {
-      return res.status(400).json({ error: "location must be 'lat,lng' (e.g., 36.1909,44.0069)" });
+      return res
+        .status(400)
+        .json({ error: "location must be 'lat,lng' (e.g., 36.1909,44.0069)" });
     }
 
     // Upload images to Supabase
-    const uploadedImages = await Promise.all(
-      files.map(async (file, idx) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname);
-        const filename = `post-${uniqueSuffix}${ext}`;
+    const uploadedImages = [];
+    for (const [idx, file] of files.entries()) {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname);
+      const filename = `post-${uniqueSuffix}${ext}`;
 
-        const { data, error } = await supabase.storage
-          .from('images') // Bucket name
-          .upload(filename, file.buffer, {
-            contentType: file.mimetype,
-            upsert: false
-          });
+      const { error } = await supabase.storage
+        .from("images") // Bucket name
+        .upload(filename, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
 
-        if (error) {
-          console.error('Supabase upload error:', error);
-          throw new Error('Failed to upload image');
-        }
+      if (error) {
+        console.error("Supabase upload error:", error);
+        throw new Error("Failed to upload image");
+      }
 
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('images')
-          .getPublicUrl(filename);
-        
-        return {
-          url: publicUrl,
-          order: idx
-        };
-      })
-    );
+      uploadedPaths.push(filename);
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("images").getPublicUrl(filename);
+
+      uploadedImages.push({
+        url: publicUrl,
+        order: idx,
+      });
+    }
 
     const post = await prisma.post.create({
       data: {
@@ -89,6 +96,13 @@ export async function createPost(req, res, next) {
 
     res.status(201).json(post);
   } catch (e) {
+    if (uploadedPaths.length > 0) {
+      await Promise.allSettled(
+        uploadedPaths.map((filename) =>
+          supabase.storage.from("images").remove([filename]),
+        ),
+      );
+    }
     next(e);
   }
 }
@@ -103,8 +117,8 @@ export async function listPosts(req, res, next) {
     }
 
     const where = {};
-    if (status) where.status = status;          // optional
-    if (city) where.city = city;                // optional
+    if (status) where.status = status; // optional
+    if (city) where.city = city; // optional
 
     const posts = await prisma.post.findMany({
       where,
@@ -113,7 +127,9 @@ export async function listPosts(req, res, next) {
     });
 
     res.json(posts);
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 }
 export async function acceptPost(req, res, next) {
   try {
@@ -124,8 +140,7 @@ export async function acceptPost(req, res, next) {
       where: { id },
       select: { id: true, status: true },
     });
-    if (!existing) return res
-    .status(404).json({ error: "Not found" });
+    if (!existing) return res.status(404).json({ error: "Not found" });
     if (existing.status === "accepted") {
       return res.status(400).json({ error: "Already accepted" });
     }
@@ -150,15 +165,22 @@ export async function updatePost(req, res, next) {
     // Optional checks only if values provided
     if (city) {
       const allowed = CITY_DISTRICTS[city];
-      if (!allowed) return res.status(400).json({ error: `Unknown city: ${city}` });
+      if (!allowed)
+        return res.status(400).json({ error: `Unknown city: ${city}` });
       if (district && !allowed.includes(district)) {
-        return res.status(400).json({ error: `District "${district}" is not in ${city}` });
+        return res
+          .status(400)
+          .json({ error: `District "${district}" is not in ${city}` });
       }
     }
     if (location !== undefined) {
       const coords = parseLatLng(location);
       if (!coords) {
-        return res.status(400).json({ error: "location must be 'lat,lng' (e.g., 36.1909,44.0069)" });
+        return res
+          .status(400)
+          .json({
+            error: "location must be 'lat,lng' (e.g., 36.1909,44.0069)",
+          });
       }
     }
 
@@ -199,7 +221,9 @@ export async function deletePost(req, res, next) {
 
     // moderators cannot delete accepted posts
     if (role === "moderator" && post.status !== "pending") {
-      return res.status(403).json({ error: "Forbidden (moderator can delete only pending)" });
+      return res
+        .status(403)
+        .json({ error: "Forbidden (moderator can delete only pending)" });
     }
 
     // try to remove image files from Supabase (best-effort)
@@ -209,16 +233,16 @@ export async function deletePost(req, res, next) {
       // Example URL: https://xyz.supabase.co/storage/v1/object/public/images/filename.jpg
       try {
         const urlObj = new URL(img.url);
-        const parts = urlObj.pathname.split('/');
+        const parts = urlObj.pathname.split("/");
         const filename = parts[parts.length - 1]; // last segment
         if (filename) pathsToDelete.push(filename);
       } catch (err) {
-        console.warn('Could not parse image URL for deletion:', img.url);
+        console.warn("Could not parse image URL for deletion:", img.url);
       }
     }
 
     if (pathsToDelete.length > 0) {
-      await supabase.storage.from('images').remove(pathsToDelete);
+      await supabase.storage.from("images").remove(pathsToDelete);
     }
 
     // delete image rows then the post
@@ -226,5 +250,7 @@ export async function deletePost(req, res, next) {
     await prisma.post.delete({ where: { id } });
 
     res.json({ ok: true });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 }
