@@ -14,15 +14,23 @@ async function main() {
   //    Example: SEED_ADMINS="admin@gmail.com:MyPass123!:super,mod@gmail.com:ModPass456!:moderator"
   if (!process.env.SEED_ADMINS) {
     console.log("❌ SEED_ADMINS env variable is required.");
-    console.log('   Format: SEED_ADMINS="email:password:role,email:password:role"');
+    console.log(
+      '   Format: SEED_ADMINS="email:password:role,email:password:role"',
+    );
     console.log('   Example: SEED_ADMINS="admin@gmail.com:StrongPass!:super"');
     process.exit(1);
   }
 
-  const users = process.env.SEED_ADMINS.trim().split(",").map((entry) => {
-    const [email, password, role] = entry.split(":");
-    return { email: email.trim(), password: password.trim(), role: role.trim() };
-  });
+  const users = process.env.SEED_ADMINS.trim()
+    .split(",")
+    .map((entry) => {
+      const [email, password, role] = entry.split(":");
+      return {
+        email: email.trim(),
+        password: password.trim(),
+        role: role.trim(),
+      };
+    });
 
   // 4) Protect production unless explicitly allowed
   if (
@@ -30,7 +38,7 @@ async function main() {
     process.env.SEED_ALLOW_PROD !== "true"
   ) {
     console.log(
-      "❌ Refusing too seed in n production without SEED_ALLOW_PROD=true"
+      "❌ Refusing too seed in n production without SEED_ALLOW_PROD=true",
     );
     process.exit(1);
   }
@@ -51,7 +59,7 @@ async function main() {
 
   console.log(`✅ Seed completed`);
   console.log(
-    `   Users total: ${users.length} (super: ${superCount}, moderator: ${modCount})`
+    `   Users total: ${users.length} (super: ${superCount}, moderator: ${modCount})`,
   );
 }
 
